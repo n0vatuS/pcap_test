@@ -1,3 +1,5 @@
+#pragma once
+
 // Length
 #define MAC_ADDR_LEN 6
 #define IP_ADDR_LEN 4
@@ -31,8 +33,8 @@ struct IP_Header {
 };
 
 struct TCP_Header {
-    u_char src_port[PORT_ADDR_LEN];
-    u_char des_port[PORT_ADDR_LEN];
+    u_short src_port;
+    u_short des_port;
     u_char etc[10];
 };
 

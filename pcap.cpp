@@ -1,11 +1,21 @@
 #include <pcap.h>
-#include <stdint.h>
 #include "pcap.h"
 #define min(a,b) (((a)<(b))?(a):(b))
 
-uint16_t my_ntohs(uint16_t n)
-{
-    return ((n & 0xFF00) >> 8) | ((n & 0x00FF) << 8);
+void printMacAddress(u_char * arr) {
+    for(int i=0;i<MAC_ADDR_LEN;i++) {
+        printf("%02x", arr[i]);
+        if(i < MAC_ADDR_LEN - 1)
+            printf(":");
+    }
+}
+
+void printIPAddress(u_char * arr) {
+    for(int i=0;i<IP_ADDR_LEN;i++) {
+        printf("%u", arr[i]);
+        if(i < IP_ADDR_LEN - 1)
+            printf(".");
+    }
 }
 
 void DataLinkLayer(const u_char * packet, int len){
@@ -13,21 +23,13 @@ void DataLinkLayer(const u_char * packet, int len){
 
     printf("[ Data Link Layer : Ethernet ]\n");
     printf("source MAC : ");
-    for(int i=0;i<MAC_ADDR_LEN;i++) {
-        printf("%02x", ether_header -> src_mac[i]);
-        if(i < MAC_ADDR_LEN - 1)
-            printf(":");
-    }
+    printMacAddress(ether_header -> src_mac);
     printf("\n");
     printf("destination MAC : ");
-    for(int i=0;i<MAC_ADDR_LEN;i++) {
-        printf("%02x", ether_header -> des_mac[i]);
-        if(i < MAC_ADDR_LEN - 1)
-            printf(":");
-    }
+    printMacAddress(ether_header -> des_mac);
     printf("\n\n");
     
-    switch(my_ntohs(ether_header -> ether_type)) {
+    switch(ntohs(ether_header -> ether_type)) {
     case IP_v4_HEADER: {
         printf("[ Network Layer : IP_v4 ]\n");
         NetworkLayer(packet, len, DATALINK_HEADER_SIZE);
@@ -45,14 +47,17 @@ void DataLinkLayer(const u_char * packet, int len){
 
 void NetworkLayer(const u_char * packet, int len, int start){
     struct IP_Header * ip_header = (struct IP_Header *)(packet+start);
-    printf("source IP : %d.%d.%d.%d\n",ip_header -> src_ip[0], ip_header -> src_ip[1], ip_header -> src_ip[2], ip_header -> src_ip[3]);
-    printf("destination IP : %d.%d.%d.%d\n",ip_header -> des_ip[0], ip_header -> des_ip[1], ip_header -> des_ip[2], ip_header -> des_ip[3]);
+    printf("source IP : ");
+    printIPAddress(ip_header->src_ip);
     printf("\n");
+    printf("destination IP : ");
+    printIPAddress(ip_header->des_ip);
+    printf("\n\n");
 
     switch(ip_header -> protocol) {
     case TCP:
         printf("[ Transport Layer : TCP ]\n");
-        TransportLayer(packet, len, start + (((int)ip_header->etc[0] & 0x0F) << 2));
+        TransportLayer(packet, len, start + ((ip_header->etc[0] & 0x0F) << 2));
         break;
     case UDP:
         printf("[ Transport Layer : UDP ]\n");
@@ -65,8 +70,8 @@ void NetworkLayer(const u_char * packet, int len, int start){
 
 void TransportLayer(const u_char * packet, int len, int start){
     struct TCP_Header * tcp_header = (struct TCP_Header *)(packet+start);
-    printf("source PORT : %d\n", tcp_header -> src_port[0] << 8 | tcp_header -> src_port[1]);
-    printf("destination PORT : %d\n", tcp_header -> des_port[0] << 8 | tcp_header -> des_port[1]);
+    printf("source PORT : %u\n", ntohs(tcp_header -> src_port));
+    printf("destination PORT : %u\n", ntohs(tcp_header -> des_port));
     printf("\n");
 
     printf("[ Payload ]\n");
